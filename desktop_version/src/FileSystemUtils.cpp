@@ -35,7 +35,7 @@ static int mkdir(char* path, int mode)
 #include <sys/stat.h>
 #include <emscripten.h>
 #define MAX_PATH PATH_MAX
-#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__HAIKU__) || defined(__DragonFly__) || defined(__unix__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__HAIKU__) || defined(__DragonFly__) || defined(__unix__) || defined(__PS2__)
 #include <limits.h>
 #include <sys/stat.h>
 #define MAX_PATH PATH_MAX
@@ -194,7 +194,11 @@ int FILESYSTEM_init(char *argvZero, char* baseDir, char *assetsPath, char* langD
     argvZero = (char*) &androidInit;
 #endif
 
+#ifdef __PS2__
+    if (!PHYSFS_init(SDL_GetBasePath()))
+#else
     if (!PHYSFS_init(argvZero))
+#endif
     {
         vlog_error(
             "Unable to initialize PhysFS: %s",
@@ -925,6 +929,7 @@ void FILESYSTEM_loadFileToMemory(
         goto fail;
     }
     length = PHYSFS_fileLength(handle);
+  
     if (len != NULL)
     {
         if (length < 0)
@@ -1363,6 +1368,18 @@ static int PLATFORM_getOSDirectory(char* output, const size_t output_size)
         return 0;
     }
     SDL_snprintf(output, output_size, "%s/../../Documents/", prefsPath);
+    return 1;
+#elif defined(__PS2__)
+    const char* prefsPath = SDL_GetBasePath();
+    if (prefsPath == NULL)
+    {
+        vlog_error(
+            "Could not get OS directory: %s",
+            SDL_GetError()
+        );
+        return 0;
+    }
+    SDL_snprintf(output, output_size, "%s", prefsPath);
     return 1;
 #else
     const char* prefDir = PHYSFS_getPrefDir("distractionware", "VVVVVV");
